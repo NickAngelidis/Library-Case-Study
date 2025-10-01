@@ -20,7 +20,7 @@ Borrowings
 
 **Library_CreateDB**
 
-This folder/file contains:
+This file contains:
 
 SQL commands to create the LibraryDB database.
 
