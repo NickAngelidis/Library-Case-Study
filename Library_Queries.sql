@@ -1,0 +1,118 @@
+-- Question 1: Find how many books there are in each genre
+SELECT g.GENRENAME , COUNT(BookID) AS BOOKS_PER_GENRE
+FROM BOOKS b 
+JOIN GENRES g ON g.GENREID = b.GENREID
+GROUP BY g.GENRENAME;
+
+-- Question 2: Find the 3 most borrowed books
+SELECT b.TITLE, COUNT(borr.BOOKID) AS NUMBER_BORROWED
+FROM BOOKS b
+JOIN BORROWINGS borr ON borr.BOOKID = b.BOOKID
+GROUP BY borr.BOOKID, b.TITLE
+ORDER BY NUMBER_BORROWED DESC
+LIMIT 3;
+
+-- Question 3: Authors with the most borrowed books
+SELECT a.NAME , COUNT(borr.BOOKID) AS NUMBER_BORROWED
+FROM BOOKS b 
+JOIN BORROWINGS borr ON borr.BOOKID = b.BOOKID
+JOIN AUTHORS a ON a.AUTHORID = b.AUTHORID
+GROUP BY a.NAME
+ORDER BY NUMBER_BORROWED DESC
+LIMIT 1;
+
+-- Alternative Method (In case of 2 authors having the same amount of borrowed books)
+
+SELECT a.NAME , COUNT(borr.BOOKID) AS NUMBER_BORROWED
+FROM BOOKS b 
+JOIN BORROWINGS borr ON borr.BOOKID = b.BOOKID
+JOIN AUTHORS a ON a.AUTHORID = b.AUTHORID
+GROUP BY a.NAME
+HAVING NUMBER_BORROWED = (
+	SELECT MAX(BOOKCOUNT)
+	FROM (
+		SELECT COUNT(BORR2.BOOKID) AS BOOKCOUNT
+		FROM BORROWINGS borr2 
+		JOIN BOOKS b2 ON b2.BOOKID = borr2.BOOKID
+        GROUP BY b2.AUTHORID
+        ) AS SUB
+	);
+
+-- Question 4: Members with NO borrowings
+SELECT m.NAME
+FROM MEMBERS m
+WHERE m.MEMBERID NOT IN (
+SELECT MEMBERID
+FROM BORROWINGS);
+
+-- Question 5: Find all the times where a book was returned after 30 days
+SELECT BORROWID, BOOKID, MEMBERID, BORROWDATE, RETURNDATE
+FROM BORROWINGS
+WHERE RETURNDATE IS NOT NULL
+	AND DATEDIFF(RETURNDATE, BORROWDATE) > 30;
+    
+-- Question 6: Find the average borrowing time(days) per genre
+SELECT g.GENRENAME, AVG(DATEDIFF(RETURNDATE, BORROWDATE)) AS AVERAGE_BORROWING_DAYS
+FROM BOOKS b
+JOIN GENRES g ON g.GENREID = b.GENREID
+JOIN BORROWINGS borr ON borr.BOOKID = b.BOOKID
+GROUP BY g.GENRENAME;
+
+-- Question 7: Most popular genre per city
+SELECT CITY, GENRENAME, TOTALBORROWED
+FROM (
+    SELECT 
+        m.CITY,
+        g.GENRENAME,
+        COUNT(borr.BORROWID) AS TOTALBORROWED,
+        RANK() OVER (PARTITION BY m.CITY ORDER BY COUNT(borr.BORROWID) DESC) AS RANKINCITY
+    FROM BORROWINGS borr
+    JOIN MEMBERS m ON borr.MEMBERID = m.MEMBERID
+    JOIN BOOKS b ON borr.BOOKID = b.BOOKID
+    JOIN GENRES g ON b.GENREID = g.GENREID
+    GROUP BY m.CITY, g.GENRENAME
+) AS RANKEDGENRES
+WHERE RANKINCITY = 1;
+
+-- Question 8: Find the author with the most books in the library
+SELECT a.NAME, COUNT(b.BOOKID) AS NUMBER_OF_BOOKS
+FROM BOOKS b
+JOIN AUTHORS a ON a.AUTHORID = b.AUTHORID
+GROUP BY a.NAME
+HAVING NUMBER_OF_BOOKS = (
+	SELECT MAX(BOOKCOUNT)
+    FROM ( 
+		SELECT COUNT(b2.BOOKID) AS BOOKCOUNT
+        FROM BOOKS b2
+		GROUP BY b2.AUTHORID
+        ) AS SUB
+	);
+    
+-- Question 9: Find the borrow percentage of each book compared with total copies available
+SELECT b.TITLE, (COUNT(borr.BOOKID) / b.COPIESAVAILABLE) AS BORROW_PERCENTAGE
+FROM BOOKS b
+JOIN BORROWINGS borr ON borr.BOOKID = b.BOOKID
+GROUP BY b.TITLE, b.COPIESAVAILABLE;
+
+-- Question 10: Find the member with the most borrowings per year
+SELECT Year, MemberName, TotalBorrowed
+FROM (
+    SELECT 
+        YEAR(borr.BORROWDATE) AS Year,
+        m.NAME AS MemberName,
+        COUNT(borr.BORROWID) AS TotalBorrowed,
+        RANK() OVER (PARTITION BY YEAR(borr.BORROWDATE) ORDER BY COUNT(borr.BORROWID) DESC) AS RankInYear
+    FROM BORROWINGS borr
+    JOIN MEMBERS m ON borr.MEMBERID = m.MEMBERID
+    GROUP BY YEAR(borr.BORROWDATE), m.MEMBERID, m.NAME
+) AS RankedMembers
+WHERE RankInYear = 1;
+
+
+
+
+    
+
+    
+
+
